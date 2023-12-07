@@ -1,7 +1,6 @@
 package ru.practicum.ewm.stats.service;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.practicum.ewm.stats.dto.StatEntryDto;
 import ru.practicum.ewm.stats.map.DateMapper;
@@ -16,7 +15,6 @@ import java.time.LocalDateTime;
 public class StatsServiceImpl implements StatsService {
     private final StatsRepository statsRepository;
 
-    @Autowired
     public StatsServiceImpl(StatsRepository repository) {
         this.statsRepository = repository;
     }

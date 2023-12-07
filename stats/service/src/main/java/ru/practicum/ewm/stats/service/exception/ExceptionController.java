@@ -12,6 +12,20 @@ import java.util.Map;
 @Slf4j
 public class ExceptionController {
     @ExceptionHandler
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, String> handleMethod(final BadRequestException e) {
+        log.warn(e.toString());
+        return Map.of("error", e.getMessage());
+    }
+
+    @ExceptionHandler
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public Map<String, String> handleMethod(final NotFoundException e) {
+        log.warn(e.toString());
+        return Map.of("error", e.getMessage());
+    }
+
+    @ExceptionHandler
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Map<String, String> handleMethod(final Exception e) {
         log.error(e.toString());

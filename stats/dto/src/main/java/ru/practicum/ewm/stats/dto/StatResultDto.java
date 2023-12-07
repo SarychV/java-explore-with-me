@@ -14,5 +14,5 @@ public class StatResultDto {
 
     private String uri;
 
-    int hits;
+    private int hits;
 }

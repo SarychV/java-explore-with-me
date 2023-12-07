@@ -21,6 +21,7 @@ public class DateMapper {
             return URLEncoder.encode(dateTime.format(formatter), StandardCharsets.UTF_8.toString());
         } catch (Exception e) {
             log.error("Для преобразования времени используется неподдерживаемая кодировка 'UTF-8'");
+            e.printStackTrace();
         }
         return "";
     }
