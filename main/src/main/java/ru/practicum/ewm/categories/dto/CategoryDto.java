@@ -1,25 +1,19 @@
-package ru.practicum.ewm.admin.users.dto;
+package ru.practicum.ewm.categories.dto;
 
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
-import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 
 @Setter
 @Getter
 @ToString
-public class UserDto {
+public class CategoryDto {
     private long id;
 
     @NotBlank
-    @Size(min = 2, max = 250)
+    @Size(min = 1, max = 50)
     private String name;
-
-    @Email
-    @NotBlank
-    @Size(min = 6, max = 254)
-    private String email;
 }

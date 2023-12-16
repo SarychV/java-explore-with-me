@@ -1,7 +1,8 @@
-package ru.practicum.ewm.admin.users;
+package ru.practicum.ewm.users;
 
-import ru.practicum.ewm.admin.users.dto.UserDto;
-import ru.practicum.ewm.admin.users.model.User;
+import ru.practicum.ewm.users.dto.UserDto;
+import ru.practicum.ewm.users.dto.UserShortDto;
+import ru.practicum.ewm.users.model.User;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -26,5 +27,12 @@ public class UserMapper {
         return users.stream()
                 .map(UserMapper::toUserDto)
                 .collect(Collectors.toList());
+    }
+
+    public static UserShortDto toUserShortDto(User user) {
+        UserShortDto result = new UserShortDto();
+        result.setId(user.getId());
+        result.setName(user.getName());
+        return result;
     }
 }

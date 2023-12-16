@@ -1,6 +1,6 @@
-package ru.practicum.ewm.admin.users;
+package ru.practicum.ewm.users;
 
-import ru.practicum.ewm.admin.users.dto.UserDto;
+import ru.practicum.ewm.users.dto.UserDto;
 
 import java.util.List;
 

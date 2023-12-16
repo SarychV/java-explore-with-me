@@ -1,21 +1,24 @@
-package ru.practicum.ewm.admin.users;
+package ru.practicum.ewm.users;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import ru.practicum.ewm.admin.users.dto.UserDto;
+import ru.practicum.ewm.users.dto.UserDto;
 
 import javax.validation.Valid;
 import javax.validation.constraints.Positive;
+import javax.validation.constraints.PositiveOrZero;
 import java.util.List;
 
 @RestController
 @RequestMapping("/admin/users")
 @Slf4j
-public class UserController {
+@Validated
+public class AdminUsersController {
     private final UserService userService;
 
-    public UserController(UserService userService) {
+    public AdminUsersController(UserService userService) {
         this.userService = userService;
     }
 
@@ -28,8 +31,8 @@ public class UserController {
 
     @GetMapping
     public List<UserDto> getUsers(
-            @RequestParam(name = "ids", required = false) @Positive long[] ids,
-            @RequestParam(name = "from", defaultValue = "0") @Positive int from,
+            @RequestParam(name = "ids", required = false) long[] ids,
+            @RequestParam(name = "from", defaultValue = "0") @PositiveOrZero int from,
             @RequestParam(name = "size", defaultValue = "10") @Positive int size) {
         log.info("userService.getUserList() was invoked with arguments ids={}, from={}, size={}", ids, from, size);
         return userService.getUserList(ids, from, size);
