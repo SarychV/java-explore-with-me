@@ -34,7 +34,7 @@ public class EventMapper {
         return result;
     }
 
-    public static EventDtoOut toEventDtoOut(Event event, long confirmedRequests, long views) {
+    public static EventDtoOut toEventDtoOut(Event event, long views) {
         EventDtoOut result = new EventDtoOut();
         result.setId(event.getId());
         result.setTitle(event.getTitle());
@@ -53,19 +53,19 @@ public class EventMapper {
         result.setParticipantLimit(event.getParticipantLimit());
         result.setRequestModeration(event.isRequestModeration());
         result.setInitiator(UserMapper.toUserShortDto(event.getInitiator()));
-        result.setConfirmedRequests(confirmedRequests);
+        result.setConfirmedRequests(event.getConfirmedRequests());
         result.setState(event.getState().name());
         result.setViews(views);
         return result;
     }
 
-    public static EventShortDtoOut toEventShortDtoOut(Event event, long confirmedRequests, long views) {
+    public static EventShortDtoOut toEventShortDtoOut(Event event, long views) {
         EventShortDtoOut result = new EventShortDtoOut();
         result.setId(event.getId());
         result.setTitle(event.getTitle());
         result.setAnnotation(event.getAnnotation());
-        result.setCategoryDto(CategoryMapper.toCategoryDto(event.getCategory()));
-        result.setConfirmedRequests(confirmedRequests);
+        result.setCategory(CategoryMapper.toCategoryDto(event.getCategory()));
+        result.setConfirmedRequests(event.getConfirmedRequests());
         result.setEventDate(event.getEventDate().format(Constant.DATE_TIME_WHITESPACE));
         result.setInitiator(UserMapper.toUserShortDto(event.getInitiator()));
         result.setPaid(event.isPaid());
@@ -80,6 +80,7 @@ public class EventMapper {
         newEvent.setCreatedOnDate(event.getCreatedOnDate());
         newEvent.setInitiator(event.getInitiator());
         newEvent.setState(event.getState());
+        newEvent.setConfirmedRequests(event.getConfirmedRequests());
 
         if (eventDto.getAnnotation() == null) {
             newEvent.setAnnotation(event.getAnnotation());

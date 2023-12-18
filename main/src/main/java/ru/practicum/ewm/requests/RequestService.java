@@ -13,9 +13,9 @@ public interface RequestService {
 
     RequestDto cancelRequest(long userId, long requestId);
 
-    List<RequestDto> giveUserTheRequestsForEvent(long userId, long eventId);
+    List<RequestDto> giveUserEventRequests(long userId, long eventId);
 
-    RequestsAndStatusDtoOut changeRequestStatusForEvent(long userId, long eventId,
+    RequestsAndStatusDtoOut changeEventRequestStatus(long userId, long eventId,
                                                         RequestsAndStatusDtoIn requestsAndStatusDtoIn);
 }
 

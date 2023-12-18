@@ -5,10 +5,9 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.ewm.events.dto.EventDtoOut;
 import ru.practicum.ewm.events.dto.EventShortDtoOut;
-import ru.practicum.ewm.events.model.EventState;
 import ru.practicum.ewm.events.model.StateSorting;
-import ru.practicum.ewm.requests.RequestService;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Positive;
 import javax.validation.constraints.PositiveOrZero;
@@ -69,20 +68,29 @@ public class PublicEventsController {
             // Количество событий в наборе
             @RequestParam(required = false, defaultValue = "10")
             @Positive
-            int size) {
+            int size,
+
+            HttpServletRequest request) {
+        String ip = request.getRemoteAddr();
+        String uri = request.getRequestURI();
         log.info("eventService.findPublishedEvents() was invoked with arguments text={}, " +
                         "categoryIds={}, paid={}, rangeStart={}, rangeEnd={}, onlyAvailable={}, " +
-                        "sort={}, from={}, size={}",
-                text, categoryIds, paid, rangeStart, rangeEnd, onlyAvailable, sort, from, size);
+                        "sort={}, from={}, size={}, ip={}, uri={}",
+                text, categoryIds, paid, rangeStart, rangeEnd, onlyAvailable,  sort, from, size, ip, uri);
+
         return eventService.findPublishedEvents(text, categoryIds, paid, rangeStart, rangeEnd,
-                onlyAvailable, sort, from, size);
+                onlyAvailable, sort, from, size, ip, uri);
     }
 
     // Получение подробной информации об опубликованном событии по его идентификатору
     @GetMapping("/{id}")
-    public EventDtoOut findCompleteEventDataByEventId(@PathVariable @Positive long id) {
-        log.info("eventService.findCompleteEventDataById) was invoked with arguments id={}", id);
-        return eventService.findCompletePublishedEventDataByEventId(id);
+    public EventDtoOut getCompleteEventDataByEventId(@PathVariable @Positive long id, HttpServletRequest request) {
+        String ip = request.getRemoteAddr();
+        String uri = request.getRequestURI();
+        log.info("eventService.findCompleteEventDataById) was invoked with arguments id={}, ip={}, uri={}",
+                id, ip, uri);
+
+        return eventService.findCompletePublishedEventDataByEventId(id, ip, uri);
     }
 }
 

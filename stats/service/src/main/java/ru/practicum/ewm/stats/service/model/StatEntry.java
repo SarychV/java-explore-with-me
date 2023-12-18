@@ -2,6 +2,7 @@ package ru.practicum.ewm.stats.service.model;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
@@ -10,6 +11,7 @@ import java.time.LocalDateTime;
 @Table(name = "statentries")
 @Getter
 @Setter
+@ToString
 public class StatEntry {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

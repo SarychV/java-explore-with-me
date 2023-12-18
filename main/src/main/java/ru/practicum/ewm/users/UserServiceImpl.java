@@ -27,7 +27,7 @@ public class UserServiceImpl implements UserService {
         log.info("userRepository.save() was invoked with arguments user={}", user);
         User returnedUser = userRepository.save(user);
         UserDto result = UserMapper.toUserDto(returnedUser);
-        log.info("To the AdminUsersController was returned: userDto={}", result);
+        log.info("To AdminUsersController was returned userDto={}", result);
         return result;
     }
 
@@ -43,7 +43,7 @@ public class UserServiceImpl implements UserService {
             Page<User> users = userRepository.findAll(page);
             userDtoList = UserMapper.toUserDtoList(users.stream().collect(Collectors.toList()));
         }
-        log.info("To the AdminUsersController was returned: userDtoList={}", userDtoList);
+        log.info("To AdminUsersController was returned userDtoList={}", userDtoList);
         return userDtoList;
     }
 
@@ -51,6 +51,7 @@ public class UserServiceImpl implements UserService {
     public void deleteUser(long userId) {
         userRepository.findById(userId).orElseThrow(() -> new NotFoundException(
                 String.format("User with id=%d was not found", userId)));
+        log.info("User with id={} was deleted", userId);
         userRepository.deleteById(userId);
     }
 }

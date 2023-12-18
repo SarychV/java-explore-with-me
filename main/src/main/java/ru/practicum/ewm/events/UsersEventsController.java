@@ -77,7 +77,7 @@ public class UsersEventsController {
             @PathVariable @Positive long eventId) {
         log.info("requestService.giveInitiatorTheRequestsForHisEvents() " +
                         "was invoked with arguments userId={}, eventId={}", userId, eventId);
-        return requestService.giveUserTheRequestsForEvent(userId, eventId);
+        return requestService.giveUserEventRequests(userId, eventId);
     }
 
     // Изменение статуса (подтверждена, отменена) заявок на участие в событии текущего пользователя
@@ -89,7 +89,7 @@ public class UsersEventsController {
         log.info("requestService.changeRequestStatusForEvent() " +
                 "was invoked with arguments userId={}, eventId={}, requestsAndStatusDtoIn={}",
                 userId, eventId, requestsAndStatusDtoIn);
-        return requestService.changeRequestStatusForEvent(userId, eventId, requestsAndStatusDtoIn);
+        return requestService.changeEventRequestStatus(userId, eventId, requestsAndStatusDtoIn);
     }
 
 }

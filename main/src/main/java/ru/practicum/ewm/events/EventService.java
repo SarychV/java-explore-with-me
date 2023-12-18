@@ -25,7 +25,7 @@ public interface EventService {
 
     List<EventShortDtoOut> findPublishedEvents(String text, List<Long> categoryIds, boolean paid,
                                                String rangeStart, String rangeEnd, boolean onlyAvailable,
-                                               StateSorting sort, int from, int size);
+                                               StateSorting sort, int from, int size, String ip, String uri);
 
-    EventDtoOut findCompletePublishedEventDataByEventId(long id);
+    EventDtoOut findCompletePublishedEventDataByEventId(long id, String ip, String uri);
 }

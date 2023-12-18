@@ -13,9 +13,6 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
     // поиск запроса по идентификатору пользователя и идентификатору события
     Optional<Request> findByRequesterIdAndEventId(long requesterId, long eventId);
 
-    @Query("select count(r.eventId) from Request as r where r.eventId = ?1 and r.status = ?2")
-    int getHowManyRequestsHaveStatusForEvent(long eventId, RequestStatus status);
-
     List<Request> findByRequesterId(long requesterId);
 
     List<Request> findByEventId(long eventId);

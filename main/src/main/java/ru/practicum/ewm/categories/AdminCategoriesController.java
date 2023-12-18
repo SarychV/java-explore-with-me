@@ -33,7 +33,6 @@ public class AdminCategoriesController {
         return categoryService.updateCategory(catId, categoryDto);
     }
 
-    //Требуется реализовать ограничение по удалению категории, на которую есть ссылка из события
     @DeleteMapping("/{catId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteCategory(@PathVariable @Positive long catId) {

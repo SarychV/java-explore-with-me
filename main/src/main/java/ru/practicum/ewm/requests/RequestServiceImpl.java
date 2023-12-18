@@ -42,11 +42,11 @@ public class RequestServiceImpl implements RequestService {
     + инициатор события не может добавить запрос на участие в своём событии (Ожидается код ошибки 409)
     + нельзя участвовать в неопубликованном событии (Ожидается код ошибки 409)
     + если у события достигнут лимит запросов на участие - необходимо вернуть ошибку (Ожидается код ошибки 409)
-    - если для события отключена пре-модерация запросов на участие,
+    + если для события отключена пре-модерация запросов на участие,
     то запрос должен автоматически перейти в состояние подтвержденного
     */
     @Override
-    public RequestDto addRequest(long userId, long eventId){
+    public RequestDto addRequest(long userId, long eventId) {
         checkUser(userId);
 
         Event event = eventRepository.findById(eventId).orElseThrow(() -> new NotFoundException(
@@ -72,18 +72,14 @@ public class RequestServiceImpl implements RequestService {
         }
         // достигнут лимит запросов на участие
         int limit = event.getParticipantLimit();
-        int confirmedRequests = requestRepository.getHowManyRequestsHaveStatusForEvent(
-                eventId, RequestStatus.CONFIRMED);
+        long confirmedRequests = event.getConfirmedRequests();
         if (limit > 0 && confirmedRequests >= limit) {
             throw new DataIntegrityViolationException(
                     String.format("An eventId=%d has the limit of participants=%d", eventId, limit));
         }
 
         Request request = new Request();
-        if (event.isRequestModeration()) {
-            // убрал [&& limit > 0) {], пока считаю что при limit=0 запросы должны иметь статус PENDING
-            // т.к. при отсутствии ограничений по количеству, у инициатора могут быть другие причины
-            // на отклонение заявки
+        if (event.isRequestModeration() && limit > 0) {
             request.setStatus(RequestStatus.PENDING);
         } else {
             request.setStatus(RequestStatus.CONFIRMED);
@@ -93,6 +89,12 @@ public class RequestServiceImpl implements RequestService {
         request.setCreatedDate(LocalDateTime.now());
 
         Request returnedRequest = requestRepository.save(request);
+
+        if (returnedRequest.getStatus().equals(RequestStatus.CONFIRMED)) {
+            event.setConfirmedRequests(event.getConfirmedRequests() + 1);
+            eventRepository.save(event);
+        }
+
         RequestDto result = RequestMapper.toRequestDto(returnedRequest);
         log.info("To UsersRequestsController was returned requestDto={}", result);
         return result;
@@ -113,7 +115,7 @@ public class RequestServiceImpl implements RequestService {
         Request request = requestRepository.findById(requestId).orElseThrow(() -> new NotFoundException(
                 String.format("Request with id=%d was not found", requestId)));
 
-        request.setStatus(RequestStatus.PENDING);
+        request.setStatus(RequestStatus.CANCELED);
         Request returnedRequest = requestRepository.save(request);
         RequestDto result = RequestMapper.toRequestDto(returnedRequest);
         log.info("To the UsersRequestsController was returned: requestDto={}", result);
@@ -121,7 +123,7 @@ public class RequestServiceImpl implements RequestService {
     }
 
     @Override
-    public List<RequestDto> giveUserTheRequestsForEvent(long userId, long eventId) {
+    public List<RequestDto> giveUserEventRequests(long userId, long eventId) {
         checkUser(userId);
         Event event = eventRepository.findById(eventId).orElseThrow(() -> new NotFoundException(
                 String.format("Event with id=%d was not found", eventId)));
@@ -143,7 +145,7 @@ public class RequestServiceImpl implements RequestService {
     }
 
     /*
-    - если для события [лимит заявок равен 0 или] отключена пре-модерация заявок,
+    + если для события [лимит заявок равен 0 или] отключена пре-модерация заявок,
      то подтверждение заявок не требуется
     + нельзя подтвердить заявку, если уже достигнут лимит по заявкам на данное событие (Ожидается код ошибки 409)
     + статус можно изменить только у заявок, находящихся в состоянии ожидания (Ожидается код ошибки 409)
@@ -152,7 +154,7 @@ public class RequestServiceImpl implements RequestService {
      */
     @Override
     @Transactional
-    public RequestsAndStatusDtoOut changeRequestStatusForEvent(
+    public RequestsAndStatusDtoOut changeEventRequestStatus(
             long userId, long eventId, RequestsAndStatusDtoIn requestsAndStatusDtoIn) {
         checkUser(userId);
         Event event = eventRepository.findById(eventId).orElseThrow(() -> new NotFoundException(
@@ -160,21 +162,22 @@ public class RequestServiceImpl implements RequestService {
         // пользователь должен быть инициатором заявки, чтобы запрос обработался
         if (event.getInitiator().getId() != userId) {
             throw new DataIntegrityViolationException(
-                    String.format("A userId=%d is not an initiator of this eventId=%d", userId, eventId));
+                    String.format("A userId=%d is not an initiator of eventId=%d", userId, eventId));
         }
 
         int limit = event.getParticipantLimit();
-        int confirmedRequests = requestRepository.getHowManyRequestsHaveStatusForEvent(
-                eventId, RequestStatus.CONFIRMED);
+        long confirmedRequests = event.getConfirmedRequests();
         // достигнут лимит по заявкам на данное событие
         if (limit > 0 && confirmedRequests >= limit) {
             throw new BadConditionException("The participant limit has been reached");
         }
-        int mayConfirmed = limit - confirmedRequests;
+        int mayConfirmed = limit - (int)confirmedRequests;
+        int confirmedHere = 0;
 
         RequestsAndStatusDtoOut result = new RequestsAndStatusDtoOut();
-        List<RequestDto> confirmedRequestDto = result.getConfirmedRequests();
-        List<RequestDto> rejectedRequestDto = result.getRejectedRequests();
+        List<RequestDto> confirmedRequestDto = new ArrayList<>();
+        List<RequestDto> rejectedRequestDto = new ArrayList<>();
+
         List<Request> processedRequests = requestRepository.findByIdInOrderByCreatedDate(
                 requestsAndStatusDtoIn.getRequestIds());
         RequestStatus newStatus = requestsAndStatusDtoIn.getStatus();
@@ -191,17 +194,25 @@ public class RequestServiceImpl implements RequestService {
                     returnedRequest = requestRepository.save(request);
                     if (newStatus == RequestStatus.CONFIRMED) {
                         confirmedRequestDto.add(RequestMapper.toRequestDto(returnedRequest));
+                        mayConfirmed--;
+                        confirmedHere++;
                     } else if (newStatus == RequestStatus.REJECTED) {
                         rejectedRequestDto.add(RequestMapper.toRequestDto(returnedRequest));
                     }
-                    mayConfirmed = mayConfirmed - 1;
                 } else {
                     request.setStatus(RequestStatus.REJECTED);
                     returnedRequest = requestRepository.save(request);
                     rejectedRequestDto.add(RequestMapper.toRequestDto(returnedRequest));
                 }
+                if (confirmedHere > 0) {
+                    confirmedRequests += confirmedHere;
+                    event.setConfirmedRequests(confirmedRequests);
+                    eventRepository.save(event);
+                }
             }
         }
+        result.setConfirmedRequests(confirmedRequestDto);
+        result.setRejectedRequests(rejectedRequestDto);
         return result;
     }
 

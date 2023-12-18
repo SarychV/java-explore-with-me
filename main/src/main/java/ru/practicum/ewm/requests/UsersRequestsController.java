@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import ru.practicum.ewm.requests.dto.RequestDto;
 
 import javax.validation.constraints.Positive;
+import javax.validation.constraints.PositiveOrZero;
 import java.util.List;
 
 @RestController
@@ -24,7 +25,7 @@ public class UsersRequestsController {
     @ResponseStatus(HttpStatus.CREATED)
     public RequestDto addRequest(
             @PathVariable @Positive long userId,
-            @RequestParam @Positive long eventId) {
+            @RequestParam @PositiveOrZero long eventId) {
         log.info("requestService.addRequest() was invoked with arguments userId={}, eventId={}", userId, eventId);
         return requestService.addRequest(userId, eventId);
     }

@@ -1,6 +1,5 @@
 package ru.practicum.ewm.users.model;
 
-
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;

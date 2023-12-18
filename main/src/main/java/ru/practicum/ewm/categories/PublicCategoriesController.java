@@ -22,7 +22,7 @@ public class PublicCategoriesController {
 
     // Получение категорий
     @GetMapping
-    public List<CategoryDto> findCategories(
+    public List<CategoryDto> getCategories(
             @RequestParam(required = false, defaultValue = "0") @PositiveOrZero int from,
             @RequestParam(required = false, defaultValue = "10") @Positive int size) {
         log.info("categoryService.findCategories() was invoked with from={}, size={}", from, size);

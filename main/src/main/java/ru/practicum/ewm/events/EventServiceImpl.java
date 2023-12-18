@@ -1,8 +1,6 @@
 package ru.practicum.ewm.events;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
@@ -23,45 +21,33 @@ import ru.practicum.ewm.exception.BadConditionException;
 import ru.practicum.ewm.exception.BadRequestException;
 import ru.practicum.ewm.exception.NotFoundException;
 import ru.practicum.ewm.requests.RequestRepository;
-import ru.practicum.ewm.requests.model.RequestStatus;
+import ru.practicum.ewm.statistic.StatisticService;
 import ru.practicum.ewm.users.UserRepository;
 import ru.practicum.ewm.users.model.User;
-import ru.practicum.ewm.stats.client.StatsClient;
 
-import javax.validation.ConstraintViolationException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 @Slf4j
 public class EventServiceImpl implements EventService {
-    private final RestTemplateBuilder builder;
-    private final String serverUrl;
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final EventRepository eventRepository;
     private final RequestRepository requestRepository;
-
-    private final StatsClient statsClient;
+    private final StatisticService statisticService;
 
     public EventServiceImpl(CategoryRepository categoryRepository,
                             UserRepository userRepository,
                             EventRepository eventRepository,
                             RequestRepository requestRepository,
-                            RestTemplateBuilder restBuilder,
-                            @Value("${stats-server.url}") String url
-                            ) {
+                            StatisticService statisticService) {
         this.categoryRepository = categoryRepository;
         this.userRepository = userRepository;
         this.eventRepository = eventRepository;
         this.requestRepository = requestRepository;
-        this.builder = restBuilder;
-        this.serverUrl = url;
-        this.statsClient = new StatsClient(serverUrl, builder);
+        this.statisticService =  statisticService;
     }
 
     @Override
@@ -74,11 +60,12 @@ public class EventServiceImpl implements EventService {
 
         Event event = EventMapper.toEvent(eventDto, category, initiator);
         willBeLaterInNHours(event.getEventDate(), 2);
+        event.setConfirmedRequests(0L);
 
         log.info("eventRepository.save() was invoked with arguments initiator={}, category={}, eventDto={}",
                 initiator, category, eventDto);
         Event returnedEvent = eventRepository.save(event);
-        result = EventMapper.toEventDtoOut(returnedEvent, 0, 0);
+        result = EventMapper.toEventDtoOut(returnedEvent, 0);
         log.info("In UsersEventsController was returned eventDtoOut={}", result);
         return result;
     }
@@ -91,40 +78,20 @@ public class EventServiceImpl implements EventService {
         // Список событий из базы событий, который создал пользователь userId
         List<Event> events = eventsPage.stream().collect(Collectors.toList());
 
-        // Необходимо получить дополнительную информацию по каждому событию, это:
-        // - количество подтвержденных запросов
-        // - статистику запросов по каждому событию
-
-        // Информацию по количеству подтвержденных запросов лучше запросить одним обращением к базе
-        // Статистику получить одним запросом ?
-
+        // Необходимо получить статистику запросов по каждому событию
         // Подготовить List<Long> ids событий, для которых нужна информация
         List<Long> eventIds = events.stream()
                         .map(Event::getId)
                         .collect(Collectors.toList());
 
-        // Получить информацию по количеству подтвержденных запросов для каждого события из списка
-        // Long - идентификатор события, Integer - количество подтвержденных запросов
-        Map<Long, Integer> confirmedRequestsByEventIds = requestRepository.getConfirmedRequestCountsByEventIds(
-                eventIds, RequestStatus.CONFIRMED);
-
         // Получить статистику просмотров событий
         // Long - идентификатор события, Long - количество просмотров события
-        Map<Long, Long> stats = queryStatisticsByEventsVisiting(eventIds);
+        Map<Long, Long> stats = statisticService.receiveStatisticsByEventIds(eventIds, false);
 
-        // Встроить в EventDtoOut информацию по количеству подтвержденных запросов и статистику просмотров
+        // Встроить в EventDtoOut статистику просмотров
         List<EventShortDtoOut> result = new ArrayList<>();
         for (Event event : events) {
-            long eventId = event.getId();
-            Integer counter = confirmedRequestsByEventIds.get(eventId);
-            if (counter == null) {
-                counter = Integer.valueOf(0);
-            }
-            Long statCounter = stats.get(eventId);
-            if (statCounter == null) {
-                statCounter = Long.valueOf(0L);
-            }
-            result.add(EventMapper.toEventShortDtoOut(event, counter, statCounter));
+            result.add(EventMapper.toEventShortDtoOut(event, stats.get(event.getId())));
         }
         return result;
     }
@@ -141,10 +108,12 @@ public class EventServiceImpl implements EventService {
                     String.format("A userId=%d is not an initiator of this eventId=%d", userId, eventId));
         }
 
-        long confirmedRequests = requestRepository.getHowManyRequestsHaveStatusForEvent(
-                eventId, RequestStatus.CONFIRMED);
-        long views = queryStatisticsByEventsVisiting(List.of(eventId)).get(eventId);
-        EventDtoOut result = EventMapper.toEventDtoOut(event, confirmedRequests, views);
+        Map<Long, Long> stats = statisticService.receiveStatisticsByEventIds(List.of(eventId), false);
+        long views = 0;
+        if (stats.size() == 1) {
+            views = stats.get(eventId);
+        }
+        EventDtoOut result = EventMapper.toEventDtoOut(event, views);
         return result;
     }
 
@@ -169,8 +138,7 @@ public class EventServiceImpl implements EventService {
         // изменить можно только отмененные события или события в состоянии ожидания модерации
         EventState eventState = event.getState();
         if (eventState != EventState.PENDING && eventState != EventState.CANCELED) {
-            throw new BadConditionException(
-                    String.format("Only pending or canceled events can be changed"));
+            throw new BadConditionException("Only pending or canceled events can be changed");
         }
 
         // если категория была изменена, необходимо подготовить объект с новой категорией
@@ -194,10 +162,13 @@ public class EventServiceImpl implements EventService {
 
         Event returnedEvent = eventRepository.save(updatedEvent);
 
-        long confirmedRequests = requestRepository.getHowManyRequestsHaveStatusForEvent(
-                eventId, RequestStatus.CONFIRMED);
-        long views = queryStatisticsByEventsVisiting(List.of(eventId)).get(eventId);
-        EventDtoOut result = EventMapper.toEventDtoOut(event, confirmedRequests, views);
+        Map<Long, Long> stats = statisticService.receiveStatisticsByEventIds(List.of(eventId), false);
+        long views = 0;
+        if (stats.size() == 1) {
+            views = stats.get(eventId);
+        }
+
+        EventDtoOut result = EventMapper.toEventDtoOut(returnedEvent, views);
         return result;
     }
 
@@ -210,53 +181,36 @@ public class EventServiceImpl implements EventService {
         if (rangeStart != null) {
             startDate = LocalDateTime.from(Constant.DATE_TIME_WHITESPACE.parse(rangeStart));
         } else {
-            startDate = LocalDateTime.MIN;
+            startDate = Constant.DATE_MIN;
         }
         if (rangeEnd != null) {
             endDate = LocalDateTime.from(Constant.DATE_TIME_WHITESPACE.parse(rangeEnd));
         } else {
-            endDate = LocalDateTime.MAX;
+            endDate = Constant.DATE_MAX;
         }
 
         Sort sortByEventDate = Sort.by(Sort.Direction.ASC,"eventDate");
         Pageable page = PageRequest.of(from, size, sortByEventDate);
         Page<Event> pageSelection =
-                eventRepository.findByInitiatorIdInAndStateInAndCategoryIdInAndEventDateBetween(
+                //eventRepository.findByInitiatorIdInAndStateInAndCategoryIdInAndEventDateBetween(
+                eventRepository.findEventsForAdmin(
                         userIds, states, categoryIds, startDate, endDate, page);
 
         List<Event> events = pageSelection.stream().collect(Collectors.toList());
-
-        // Необходимо получить дополнительную информацию по каждому событию, это:
-        // - количество подтвержденных запросов
-        // - статистику запросов по каждому событию
 
         // Подготовить List<Long> ids событий, для которых нужна информация
         List<Long> eventIds = events.stream()
                 .map(Event::getId)
                 .collect(Collectors.toList());
 
-        // Получить информацию по количеству подтвержденных запросов для каждого события из списка
-        // Long - идентификатор события, Integer - количество подтвержденных запросов
-        Map<Long, Integer> confirmedRequestsByEventIds = requestRepository.getConfirmedRequestCountsByEventIds(
-                eventIds, RequestStatus.CONFIRMED);
-
         // Получить статистику просмотров событий
         // Long - идентификатор события, Long - количество просмотров события
-        Map<Long, Long> stats = queryStatisticsByEventsVisiting(eventIds);
+        Map<Long, Long> stats = statisticService.receiveStatisticsByEventIds(eventIds, false);
 
-        // Встроить в EventDtoOut информацию по количеству подтвержденных запросов и статистику просмотров
+        // Встроить в EventDtoOut статистику просмотров событий
         List<EventDtoOut> result = new ArrayList<>();
         for (Event event : events) {
-            long eventId = event.getId();
-            Integer counter = confirmedRequestsByEventIds.get(eventId);
-            if (counter == null) {
-                counter = Integer.valueOf(0);
-            }
-            Long statCounter = stats.get(eventId);
-            if (statCounter == null) {
-                statCounter = Long.valueOf(0L);
-            }
-            result.add(EventMapper.toEventDtoOut(event, counter, statCounter));
+            result.add(EventMapper.toEventDtoOut(event, stats.get(event.getId())));
         }
         return result;
     }
@@ -296,12 +250,21 @@ public class EventServiceImpl implements EventService {
         }
 
         Event updatedEvent = EventMapper.toUpdatedEvent(event, eventDto, newCategory);
-        willBeLaterInNHours(updatedEvent.getEventDate(), 1);
+
+        if (updatedEvent.getEventDate().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("Event time should be later than current time");
+        }
 
         // Сменить статус события и установить время публикации в случае публикации
         if (stateAction == StateAction.PUBLISH_EVENT) {
+            LocalDateTime publishDate = LocalDateTime.now();
+            LocalDateTime eventDate = updatedEvent.getEventDate();
+            if (publishDate.isAfter(eventDate.minusHours(1))) {
+                throw new BadRequestException(
+                        String.format("Event time should be 1 hour later than publication time  %s", publishDate));
+            }
             updatedEvent.setState(EventState.PUBLISHED);
-            updatedEvent.setPublishedOnDate(LocalDateTime.now());
+            updatedEvent.setPublishedOnDate(publishDate);
         }
 
         if (stateAction == StateAction.REJECT_EVENT) {
@@ -310,27 +273,30 @@ public class EventServiceImpl implements EventService {
 
         Event returnedEvent = eventRepository.save(updatedEvent);
 
-        long confirmedRequests = requestRepository.getHowManyRequestsHaveStatusForEvent(
-                eventId, RequestStatus.CONFIRMED);
-        long views = queryStatisticsByEventsVisiting(List.of(eventId)).get(eventId);
-        EventDtoOut result = EventMapper.toEventDtoOut(event, confirmedRequests, views);
+        Map<Long, Long> stats = statisticService.receiveStatisticsByEventIds(List.of(eventId), true);
+        long views = 0;
+        if (stats.size() == 1) {
+            views = stats.get(eventId);
+        }
+
+        EventDtoOut result = EventMapper.toEventDtoOut(returnedEvent, views);
         return result;
     }
 
     /*
-    - в выдаче должны быть только опубликованные события
-    - текстовый поиск (по аннотации и подробному описанию) должен быть без учета регистра букв
+    + в выдаче должны быть только опубликованные события
+    + текстовый поиск (по аннотации и подробному описанию) должен быть без учета регистра букв
     + если в запросе не указан диапазон дат [rangeStart-rangeEnd],
     то нужно выгружать события, которые произойдут позже текущей даты и времени
-    - информация о каждом событии должна включать в себя количество просмотров
+    + информация о каждом событии должна включать в себя количество просмотров
     и количество уже одобренных заявок на участие
-    - информацию о том, что по этому эндпоинту был осуществлен и обработан запрос,
+    + информацию о том, что по этому эндпоинту был осуществлен и обработан запрос,
     нужно сохранить в сервисе статистики
     */
     @Override
     public List<EventShortDtoOut> findPublishedEvents(String text, List<Long> categoryIds, boolean paid,
                                   String rangeStart, String rangeEnd, boolean onlyAvailable,
-                                  StateSorting sort, int from, int size) {
+                                  StateSorting sort, int from, int size, String ip, String uri) {
         LocalDateTime rangeStartDate;
         LocalDateTime rangeEndDate;
 
@@ -343,22 +309,68 @@ public class EventServiceImpl implements EventService {
         if (rangeEnd != null) {
             rangeEndDate = LocalDateTime.from(Constant.DATE_TIME_WHITESPACE.parse(rangeEnd));
         } else {
-            rangeEndDate = LocalDateTime.MAX;
+            rangeEndDate = Constant.DATE_MAX;
         }
         if (rangeEndDate.isBefore(rangeStartDate)) {
             throw new BadRequestException("Parameter rangeStart should have a value before rangeEnd");
         }
 
-        Sort sortByEventDate = Sort.by(Sort.Direction.ASC, "eventDate");
-        Pageable page = PageRequest.of(from/size, size, sortByEventDate);
+        // сортировка по умолчанию по eventDate, после получения списка событий будет выполнена пересортировка,
+        // if (sort == StateSorting.VIEWS): true
+        Sort sortByEventDate = Sort.by(Sort.Direction.DESC, "eventDate");
+        Pageable page = PageRequest.of(from / size, size, sortByEventDate);
 
+        Page<Event> pageSelection = eventRepository.findPublishedEventsByFilter(
+                text, categoryIds, paid, EventState.PUBLISHED, rangeStartDate, rangeEndDate,
+                onlyAvailable, page);
 
-        return List.of();
+        List<Event> events = pageSelection.stream().collect(Collectors.toList());
+
+        // Подготовить List<Long> ids событий, для которых нужна информация
+        List<Long> eventIds = events.stream()
+                .map(Event::getId)
+                .collect(Collectors.toList());
+
+        // Получить статистику просмотров событий
+        // Long - идентификатор события, Long - количество просмотров события
+        Map<Long, Long> stats = statisticService.receiveStatisticsByEventIds(eventIds, false);
+
+        // Встроить в EventShortDtoOut статистику просмотров событий
+        List<EventShortDtoOut> result = new ArrayList<>();
+        for (Event event : events) {
+            result.add(EventMapper.toEventShortDtoOut(event, stats.get(event.getId())));
+        }
+
+        if (sort == StateSorting.VIEWS) {
+            result.sort(Comparator.comparingLong(EventShortDtoOut::getViews));
+        }
+        statisticService.sendStatistics(ip, uri);
+        return result;
     }
 
+    /*
+    + событие должно быть опубликовано
+    + информация о событии должна включать в себя количество просмотров и количество подтвержденных запросов
+    + информацию о том, что по этому эндпоинту был осуществлен и обработан запрос, нужно сохранить в сервисе статистики
+    */
     @Override
-    public EventDtoOut findCompletePublishedEventDataByEventId(long id) {
-        return null;
+    public EventDtoOut findCompletePublishedEventDataByEventId(long eventId, String ip, String uri) {
+        Event event = eventRepository.findById(eventId).orElseThrow(() -> new NotFoundException(
+                String.format("Event with id=%d was not found", eventId)));
+        if (event.getState() != EventState.PUBLISHED) {
+            throw new NotFoundException("Event with id=%d was not published");
+        }
+
+        Map<Long, Long> stats = statisticService.receiveStatisticsByEventIds(List.of(eventId), true);
+
+        long views = 0;
+        if (stats.size() == 1) {
+            views = stats.get(eventId);
+        }
+        EventDtoOut result = EventMapper.toEventDtoOut(event, views);
+
+        statisticService.sendStatistics(ip, uri);
+        return result;
     }
 
     private User checkUser(long userId) {
@@ -369,26 +381,9 @@ public class EventServiceImpl implements EventService {
     private void willBeLaterInNHours(LocalDateTime dateTime, int hours) {
         LocalDateTime now = LocalDateTime.now();
         if (!now.plusHours(hours).isBefore(dateTime)) {
-            throw new BadConditionException(
+            throw new BadRequestException(
                     String.format("Time %s must be %d hour(s) later than current %s",
                             dateTime.toString(), hours, now.toString()));
         }
     }
-
-    // МЕТОД - ЗАГЛУШКА
-    protected Map<Long, Long> queryStatisticsByEventsVisiting(List<Long> eventIds) {
-        Map<Long, Long> result = new HashMap<>();
-        for (Long id : eventIds) {
-            result.put(id, id);
-        }
-        /*statsClient.getStatistics(
-                LocalDateTime.MIN,//startDate
-                LocalDateTime.now(),//endDate
-                ,//uris
-                false//unique
-        );*/
-        return result;
-    }
 }
-
-// 1. Доделать queryStatisticsByEventsVisiting()
