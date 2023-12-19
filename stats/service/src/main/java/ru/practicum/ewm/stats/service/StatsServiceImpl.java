@@ -4,9 +4,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.practicum.ewm.stats.dto.StatEntryDto;
 import ru.practicum.ewm.stats.map.DateMapper;
+import ru.practicum.ewm.stats.service.exception.BadRequestException;
 import ru.practicum.ewm.stats.service.model.StatEntry;
 import ru.practicum.ewm.stats.service.model.StatResult;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.time.LocalDateTime;
 
@@ -22,31 +24,37 @@ public class StatsServiceImpl implements StatsService {
     @Override
     public void saveStatisticEntry(StatEntryDto entryDto) {
         StatEntry entry = StatsMapper.toStatEntry(entryDto);
-        log.info("Сохранение в базу данных записи статистики с параметрами entry={}", entry);
-        statsRepository.save(entry);
+        entry = statsRepository.save(entry);
+        log.info("Выполнено сохранение в базу данных записи статистики с параметрами entry={}", entry);
     }
 
     @Override
     public List<StatResult> getStatisticByUris(String start, String end, List<String> uris, boolean unique) {
-        List<StatResult> result;
+        List<StatResult> result = new ArrayList<>();
 
         LocalDateTime startDate = DateMapper.toLocalDateTime(start);
         LocalDateTime endDate = DateMapper.toLocalDateTime(end);
 
-        log.info("Запрос к базе данных с параметрами startDate={}, endDate={}, uris={}", startDate, endDate, uris);
+        if (startDate.isAfter(endDate)) {
+            throw new BadRequestException(String.format("Error: startDate=%s is after endDate=%s",
+                    startDate.toString(), endDate.toString()));
+        }
+
+        log.info("GET-запрос к базе данных с параметрами startDate={}, endDate={}, uris={}", startDate, endDate, uris);
         if (unique) {
             if (uris == null) {
-                result = statsRepository.findByAllUrisAndUniqueIP(startDate, endDate);
+                result = statsRepository.findAllUrisAndUniqueIP(startDate, endDate);
             } else {
-                result = statsRepository.findByUrisAndUniqueIP(startDate, endDate, uris);
+                result = statsRepository.findUrisAndUniqueIP(startDate, endDate, uris);
             }
         } else {
             if (uris == null) {
-                result = statsRepository.findByAllUris(startDate, endDate);
+                result = statsRepository.findAllUris(startDate, endDate);
             } else {
-                result = statsRepository.findByUris(startDate, endDate, uris);
+                result = statsRepository.findUris(startDate, endDate, uris);
             }
         }
+        log.info("По GET-запросу возвращено StatResult={}", result);
         return result;
     }
 }

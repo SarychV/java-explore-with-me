@@ -4,7 +4,6 @@ import ru.practicum.ewm.stats.map.DateMapper;
 import ru.practicum.ewm.stats.service.model.StatEntry;
 import ru.practicum.ewm.stats.dto.StatEntryDto;
 
-
 public class StatsMapper {
     public static StatEntry toStatEntry(StatEntryDto entryDto) {
         StatEntry result = new StatEntry();

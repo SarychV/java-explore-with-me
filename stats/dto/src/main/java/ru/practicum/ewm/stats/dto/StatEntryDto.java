@@ -1,11 +1,13 @@
 package ru.practicum.ewm.stats.dto;
 
 import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
 
+@Setter
 @Getter
 @ToString
 public class StatEntryDto {
@@ -15,8 +17,6 @@ public class StatEntryDto {
     @NotBlank
     private String uri;
 
-    @Pattern(regexp =
-      "(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3})(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)")
     @NotBlank
     private String ip;
 

@@ -5,7 +5,7 @@ import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
-import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.DefaultUriBuilderFactory;
 import ru.practicum.ewm.stats.dto.StatEntryDto;
@@ -74,7 +74,7 @@ public class StatsClient {
         ResponseEntity<Object> statsServerResponse;
         try {
             statsServerResponse = rest.exchange(path, HttpMethod.POST, requestEntity, Object.class);
-        } catch (HttpStatusCodeException e) {
+        } catch (RestClientException e) {
             throw new BadHttpResponseException();
         }
         return statsServerResponse;
@@ -89,7 +89,7 @@ public class StatsClient {
             statsServerResponse = rest.exchange(path, HttpMethod.GET, requestEntity,
                     new ParameterizedTypeReference<List<StatResultDto>>() {},
                     parameters);
-        } catch (HttpStatusCodeException e) {
+        } catch (RestClientException e) {
             throw new BadHttpResponseException();
         }
         return statsServerResponse;
