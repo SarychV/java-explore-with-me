@@ -54,7 +54,6 @@ public class CompilationServiceImpl implements CompilationService {
                 .collect(Collectors.toList());
         Map<Long, Long> stats = statisticService.receiveStatisticsByEventIds(eventIds, true);
 
-
         CompilationDtoOut result = CompilationMapper.toCompilationDtoOut(
                 returnedCompilation, statisticService);
         log.info("In AdminCompilationsController was returned compilationDtoOut={}", result);
