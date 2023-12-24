@@ -1,6 +1,6 @@
 HELP.md
 target/
-postman/
+postman/arch/
 arch/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/

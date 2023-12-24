@@ -20,7 +20,7 @@ import ru.practicum.ewm.events.model.StateSorting;
 import ru.practicum.ewm.exception.BadConditionException;
 import ru.practicum.ewm.exception.BadRequestException;
 import ru.practicum.ewm.exception.NotFoundException;
-import ru.practicum.ewm.requests.RequestRepository;
+import ru.practicum.ewm.locations.LocationService;
 import ru.practicum.ewm.statistic.StatisticService;
 import ru.practicum.ewm.users.UserRepository;
 import ru.practicum.ewm.users.model.User;
@@ -35,19 +35,19 @@ public class EventServiceImpl implements EventService {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final EventRepository eventRepository;
-    private final RequestRepository requestRepository;
     private final StatisticService statisticService;
+    private final LocationService locationService;
 
     public EventServiceImpl(CategoryRepository categoryRepository,
                             UserRepository userRepository,
                             EventRepository eventRepository,
-                            RequestRepository requestRepository,
-                            StatisticService statisticService) {
+                            StatisticService statisticService,
+                            LocationService locationService) {
         this.categoryRepository = categoryRepository;
         this.userRepository = userRepository;
         this.eventRepository = eventRepository;
-        this.requestRepository = requestRepository;
         this.statisticService =  statisticService;
+        this.locationService = locationService;
     }
 
     @Override
@@ -65,6 +65,7 @@ public class EventServiceImpl implements EventService {
         log.info("eventRepository.save() was invoked with arguments initiator={}, category={}, eventDto={}",
                 initiator, category, eventDto);
         Event returnedEvent = eventRepository.save(event);
+        locationService.updateLocationsByEvent(returnedEvent);
         result = EventMapper.toEventDtoOut(returnedEvent, 0);
         log.info("In UsersEventsController was returned eventDtoOut={}", result);
         return result;
@@ -161,6 +162,9 @@ public class EventServiceImpl implements EventService {
         }
 
         Event returnedEvent = eventRepository.save(updatedEvent);
+        if (eventDto.getLocation() != null) {
+            locationService.updateLocationsByEvent(returnedEvent);
+        }
 
         Map<Long, Long> stats = statisticService.receiveStatisticsByEventIds(List.of(eventId), false);
         long views = 0;
@@ -272,6 +276,9 @@ public class EventServiceImpl implements EventService {
         }
 
         Event returnedEvent = eventRepository.save(updatedEvent);
+        if (eventDto.getLocation() != null) {
+            locationService.updateLocationsByEvent(returnedEvent);
+        }
 
         Map<Long, Long> stats = statisticService.receiveStatisticsByEventIds(List.of(eventId), true);
         long views = 0;

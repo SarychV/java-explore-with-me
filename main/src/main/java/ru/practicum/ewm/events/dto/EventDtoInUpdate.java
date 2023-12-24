@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import ru.practicum.ewm.events.model.StateAction;
+import ru.practicum.ewm.model.GeoLocation;
 
 import javax.validation.Valid;
 import javax.validation.constraints.*;
@@ -26,7 +27,7 @@ public class EventDtoInUpdate {
                                         // Дата и время указываются в формате "yyyy-MM-dd HH:mm:ss"
 
     @Valid
-    private Location location;          // Широта и долгота места проведения события
+    private GeoLocation location;       // Широта и долгота места проведения события
 
     private Boolean paid;               // Нужно ли оплачивать участие в событии
 
@@ -39,5 +40,5 @@ public class EventDtoInUpdate {
     @Positive
     private Long category;              // Категория, к которой относится событие
 
-    private StateAction stateAction;
+    private StateAction stateAction;    // Действие, которое необходимо выполнить для изменения состояния события
 }

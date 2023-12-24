@@ -3,6 +3,7 @@ package ru.practicum.ewm.events.dto;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import ru.practicum.ewm.model.GeoLocation;
 
 import javax.validation.Valid;
 import javax.validation.constraints.*;
@@ -29,7 +30,7 @@ public class EventDtoIn {
                                 // Дата и время указываются в формате "yyyy-MM-dd HH:mm:ss"
 
     @Valid
-    private Location location;          // Широта и долгота места проведения события
+    private GeoLocation location;          // Широта и долгота места проведения события
 
     private boolean paid = false;       // Нужно ли оплачивать участие в событии
 

@@ -5,6 +5,7 @@ import ru.practicum.ewm.categories.model.Category;
 import ru.practicum.ewm.events.dto.*;
 import ru.practicum.ewm.events.model.Event;
 import ru.practicum.ewm.events.model.EventState;
+import ru.practicum.ewm.model.GeoLocation;
 import ru.practicum.ewm.users.UserMapper;
 import ru.practicum.ewm.users.model.User;
 import ru.practicum.ewm.categories.CategoryMapper;
@@ -15,7 +16,7 @@ public class EventMapper {
     public static Event toEvent(EventDtoIn eventDtoIn, Category category, User initiator) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime eventDate = LocalDateTime.from(Constant.DATE_TIME_WHITESPACE.parse(eventDtoIn.getEventDate()));
-        Location location = eventDtoIn.getLocation();
+        GeoLocation location = eventDtoIn.getLocation();
         Event result = new Event();
 
         result.setTitle(eventDtoIn.getTitle());
@@ -40,7 +41,7 @@ public class EventMapper {
         result.setTitle(event.getTitle());
         result.setAnnotation(event.getAnnotation());
         result.setDescription(event.getDescription());
-        result.setLocation(new Location(event.getLat(), event.getLon()));
+        result.setLocation(new GeoLocation(event.getLat(), event.getLon()));
         result.setCategory(CategoryMapper.toCategoryDto(event.getCategory()));
         result.setCreatedOn(event.getCreatedOnDate().format(Constant.DATE_TIME_WHITESPACE));
         result.setEventDate(event.getEventDate().format(Constant.DATE_TIME_WHITESPACE));
@@ -70,6 +71,34 @@ public class EventMapper {
         result.setInitiator(UserMapper.toUserShortDto(event.getInitiator()));
         result.setPaid(event.isPaid());
         result.setViews(views);
+        return result;
+    }
+
+    public static EventLocationDtoOutUser toEventLocationDtoOutUser(Event event, long views) {
+        EventLocationDtoOutUser result = new EventLocationDtoOutUser();
+        result.setId(event.getId());
+        result.setTitle(event.getTitle());
+        result.setAnnotation(event.getAnnotation());
+        result.setCategory(CategoryMapper.toCategoryDto(event.getCategory()));
+        result.setConfirmedRequests(event.getConfirmedRequests());
+        result.setEventDate(event.getEventDate().format(Constant.DATE_TIME_WHITESPACE));
+        result.setInitiator(UserMapper.toUserShortDto(event.getInitiator()));
+        result.setPaid(event.isPaid());
+        result.setViews(views);
+        result.setLocation(new GeoLocation(event.getLat(), event.getLon()));
+        return result;
+    }
+
+    public static EventLocationDtoOutAdmin toEventLocationDtoOutAdmin(Event event) {
+        EventLocationDtoOutAdmin result = new EventLocationDtoOutAdmin();
+        result.setId(event.getId());
+        result.setTitle(event.getTitle());
+        result.setAnnotation(event.getAnnotation());
+        result.setCategory(CategoryMapper.toCategoryDto(event.getCategory()));
+        result.setEventDate(event.getEventDate().format(Constant.DATE_TIME_WHITESPACE));
+        result.setInitiator(UserMapper.toUserShortDto(event.getInitiator()));
+        result.setLocation(new GeoLocation(event.getLat(), event.getLon()));
+        result.setState(event.getState());
         return result;
     }
 

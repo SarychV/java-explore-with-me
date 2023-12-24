@@ -15,7 +15,6 @@ import ru.practicum.ewm.statistic.StatisticService;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -38,7 +37,7 @@ public class CompilationServiceImpl implements CompilationService {
         List<Long> eventIds = compilationDto.getEvents();
         List<Event> events;
 
-        if (eventIds == null || eventIds.size() == 0) {
+        if (eventIds == null || eventIds.isEmpty()) {
             events = new ArrayList<>();
         } else {
             events = eventRepository.findByIdIn(eventIds);
@@ -48,11 +47,6 @@ public class CompilationServiceImpl implements CompilationService {
 
         log.info("compilationRepository.save() was invoked with arguments compilation={}", compilation);
         Compilation returnedCompilation = compilationRepository.save(compilation);
-        eventIds = returnedCompilation.getEvents()
-                .stream()
-                .map(Event::getId)
-                .collect(Collectors.toList());
-        Map<Long, Long> stats = statisticService.receiveStatisticsByEventIds(eventIds, true);
 
         CompilationDtoOut result = CompilationMapper.toCompilationDtoOut(
                 returnedCompilation, statisticService);
@@ -90,7 +84,7 @@ public class CompilationServiceImpl implements CompilationService {
         List<Long> eventIds = compilationDto.getEvents();
         List<Event> events;
         if (eventIds != null) {
-            if (eventIds.size() == 0) {
+            if (eventIds.isEmpty()) {
                 events = new ArrayList<>();
             } else {
                 events = eventRepository.findByIdIn(eventIds);
@@ -113,7 +107,7 @@ public class CompilationServiceImpl implements CompilationService {
         Compilation returnedCompilation = compilationRepository.save(compilation);
 
         CompilationDtoOut result = CompilationMapper.toCompilationDtoOut(returnedCompilation, statisticService);
-        log.info("To AdminCompilationsController was returned compilationDtoOUt={}", result);
+        log.info("To AdminCompilationsController was returned compilationDtoOut={}", result);
         return result;
     }
 
