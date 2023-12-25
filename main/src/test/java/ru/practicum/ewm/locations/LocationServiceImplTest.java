@@ -8,10 +8,10 @@ class LocationServiceImplTest {
 
     @Test
     void checkDistanceWhenCoordinatesAreEqualThenResult0() {
-        float r0 = LocationServiceImpl.distance(0f, 0f, 0f, 0f);
+        float r0 = LocationService.distance(0f, 0f, 0f, 0f);
         assertEquals(r0, 0);
 
-        float r1 = LocationServiceImpl.distance(1.9f, 3.2f, 1.9f, 3.2f);
+        float r1 = LocationService.distance(1.9f, 3.2f, 1.9f, 3.2f);
         assertEquals(r1, 0);
     }
 
@@ -22,22 +22,22 @@ class LocationServiceImplTest {
         float lat2 = 2;
         float lon2 = 3;
         float d;
-        d = LocationServiceImpl.distance(lat1, lon1, lat2, lon2);
+        d = LocationService.distance(lat1, lon1, lat2, lon2);
         System.out.printf("Distance d[(%7.4f,%7.4f)(%7.4f,%7.4f)] = %f%n", lat1, lon1, lat2, lon2, d);
         assertTrue(d < 111.15f);
 
         lat1 = 89; lon1 = 1; lat2 = 90; lon2 = 1;
-        d = LocationServiceImpl.distance(lat1, lon1, lat2, lon2);
+        d = LocationService.distance(lat1, lon1, lat2, lon2);
         System.out.printf("Distance d[(%7.4f,%7.4f)(%7.4f,%7.4f)] = %f%n", lat1, lon1, lat2, lon2, d);
         assertTrue(d < 111.15f);
 
         lat1 = 89; lon1 = 1; lat2 = 89; lon2 = 2;
-        d = LocationServiceImpl.distance(lat1, lon1, lat2, lon2);
+        d = LocationService.distance(lat1, lon1, lat2, lon2);
         System.out.printf("Distance d[(%7.4f,%7.4f)(%7.4f,%7.4f)] = %f%n", lat1, lon1, lat2, lon2, d);
         assertTrue(d < 111.15f);
 
         lat1 = 89.5f; lon1 = 1; lat2 = 89.5f; lon2 = 2;
-        d = LocationServiceImpl.distance(lat1, lon1, lat2, lon2);
+        d = LocationService.distance(lat1, lon1, lat2, lon2);
         System.out.printf("Distance d[(%7.4f,%7.4f)(%7.4f,%7.4f)] = %f%n", lat1, lon1, lat2, lon2, d);
         assertTrue(d < 111.15f);
     }
