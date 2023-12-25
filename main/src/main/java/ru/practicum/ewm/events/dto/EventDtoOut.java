@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import ru.practicum.ewm.categories.dto.CategoryDto;
+import ru.practicum.ewm.model.GeoLocation;
 import ru.practicum.ewm.users.dto.UserShortDto;
 
 @Setter
@@ -28,7 +29,7 @@ public class EventDtoOut {
                                         // Дата и время указываются в формате "yyyy-MM-dd HH:mm:ss"
     private UserShortDto initiator;     // Пользователь (краткая информация)
 
-    private Location location;          // Широта и долгота места проведения события
+    private GeoLocation location;       // Широта и долгота места проведения события
 
     private boolean paid;               // Нужно ли оплачивать участие в событии
 

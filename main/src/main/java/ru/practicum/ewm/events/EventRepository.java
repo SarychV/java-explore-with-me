@@ -41,4 +41,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     Page<Event> findPublishedEventsByFilter(String text, List<Long> categoryIds, Boolean paid, EventState state,
                                             LocalDateTime startDate, LocalDateTime endDate,
                                             boolean onlyAvailable, Pageable page);
+
+    @Query("select e from Event as e where distance(e.lat, e.lon, :latitude, :longitude) <= :radius")
+    List<Event> findEventsInLocation(float latitude, float longitude, float radius);
 }
